@@ -183,10 +183,9 @@ class Web3devs_NEAR_Access_Admin {
 	}
 
 	private function validateContractAddress($address) {
-		//TODO
-		// if(!preg_match('/^[a-zA-Z0-9]+\.[a-zA-Z0-9-_]+\:\:[a-zA-Z0-9-_]+$/m', $address)) {
-		// 	return false;
-		// }
+		if(!preg_match('/^[a-zA-Z0-9\.\-\_]+\:[a-zA-Z0-9\.\-\_]+$/m', $address)) {
+			return false;
+		}
 
 		return true;
 	}
@@ -268,23 +267,53 @@ class Web3devs_NEAR_Access_Admin {
 
 	public function web3devs_near_access_render_configured_coins_setting_field($args) {
 		?>
+		</tr>
 		<tr>
-			<td class="has-row-actions column-primary">
-				<label for="<?php echo esc_attr($args['id'].'_new_network'); ?>">Network</label>
-				<select id="<?php echo esc_attr($args['id'].'_new_network'); ?>" name="<?php echo esc_attr($args['name'].'[new][network]'); ?>">
-					<option value=""></option>
-					<option value="testnet">Testnet</option>
-					<option value="mainnet">Mainnet</option>
-				</select>
-			</td>
-			<td class="has-row-actions column-primary">
-				<label for="<?php echo esc_attr($args['id'].'_new_contract'); ?>">Contract address</label>
-				<input id="<?php echo esc_attr($args['id'].'_new_contract'); ?>" type="text" name="<?php echo esc_attr($args['name'].'[new][contract]'); ?>" value="">
-			</td>
-			<td class="has-row-actions column-primary">
-				<label for="<?php echo esc_attr($args['id'].'_new_symbol'); ?>">Label</label>
-				<input id="<?php echo esc_attr($args['id'].'_new_symbol'); ?>" type="text" name="<?php echo esc_attr($args['name'].'[new][symbol]'); ?>" value="">
-			</td>
+			<table>
+				<thead>
+					<tr>
+						<td class="has-row-actions column-primary">
+							<label for="<?php echo esc_attr($args['id'].'_new_network'); ?>">Network</label>
+						</td>
+						<td class="has-row-actions column-primary">
+							<label for="<?php echo esc_attr($args['id'].'_new_contract'); ?>">Contract address</label>
+						</td>
+						<td class="has-row-actions column-primary">
+							<label for="<?php echo esc_attr($args['id'].'_new_symbol'); ?>">Label</label>
+						</td>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="has-row-actions column-primary">
+							<select id="<?php echo esc_attr($args['id'].'_new_network'); ?>" name="<?php echo esc_attr($args['name'].'[new][network]'); ?>">
+								<option value=""></option>
+								<option value="testnet">Testnet</option>
+								<option value="mainnet">Mainnet</option>
+							</select>
+						</td>
+						<td class="has-row-actions column-primary">
+							<input id="<?php echo esc_attr($args['id'].'_new_contract'); ?>" type="text" name="<?php echo esc_attr($args['name'].'[new][contract]'); ?>" value="">
+						</td>
+						<td class="has-row-actions column-primary">
+							<input id="<?php echo esc_attr($args['id'].'_new_symbol'); ?>" type="text" name="<?php echo esc_attr($args['name'].'[new][symbol]'); ?>" value="">
+						</td>
+					</tr>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td colspan="3">
+							<strong>NOTE!</strong>
+							<div>
+								Use contract address in format <strong>CONTRACT_ADDRESS:TOKEN_ID</strong>, ex. <strong>cowboytest.mintspace2.testnet:108</strong>
+							</div>
+							<div>
+								You can find the contract address in your Wallet's address bar. It'll look like this: https://wallet.testnet.near.org/nft-detail/cowboytest.mintspace2.testnet/108
+							</div>
+						</td>
+					</tr>
+				</tfoot>
+			</table>
 		</tr>
 		<?php
 	}
@@ -313,19 +342,6 @@ class Web3devs_NEAR_Access_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Web3devs_NEAR_Access_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Web3devs_NEAR_Access_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/web3devs-near-access-admin.css', array(), $this->version, 'all' );
 
 	}
@@ -336,21 +352,6 @@ class Web3devs_NEAR_Access_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_scripts() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Web3devs_NEAR_Access_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Web3devs_NEAR_Access_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/web3devs-near-access-admin.js', array( 'jquery' ), $this->version, false );
-
 	}
-
 }

@@ -257,22 +257,23 @@ class Web3devs_NEAR_Access_Public {
 			if (strtoupper($_SERVER['REQUEST_METHOD']) === 'OPTIONS') {
 				header("Access-Control-Allow-Origin: *");
 				header("Access-Control-Allow-Headers: content-type");
-				return;
+				exit;
 			}
 
 			if (strtoupper($_SERVER['REQUEST_METHOD']) !== 'POST') {
 				header("Access-Control-Allow-Origin: *");
 				header("Access-Control-Allow-Headers: content-type");
-				return;
+				exit;
 			}
 
 			//See if we have token associated with this page
-			$pid = url_to_postid($_SERVER['HTTP_REFERER']);
+			$purl = $_SERVER['HTTP_ORIGIN'] . $_SERVER['REQUEST_URI'];
+			$pid = url_to_postid($purl);
 			$token = get_post_meta($pid, '_web3devs_near_access_meta_key', true);
 			if (!$token) {
 				header("Access-Control-Allow-Origin: *");
 				header("Access-Control-Allow-Headers: content-type");
-				return;
+				exit;
 			}
 
 			//Grab request body
@@ -372,7 +373,7 @@ class Web3devs_NEAR_Access_Public {
 			'network' 		=> $token['network'],
 		];
 
-		return '<web-greeting tokenName="'.$data['tokenName'].'" tokenAddress="'.$data['tokenAddress'].'" network="'.$data['network'].'" callback="'.$data['callback'].'" message="'.$data['message'].'"></web-greeting>';
+		return '<div style="display: flex; align-items: center; flex-direction: column"><web-greeting tokenName="'.$data['tokenName'].'" tokenAddress="'.$data['tokenAddress'].'" network="'.$data['network'].'" callback="'.$data['callback'].'" message="'.$data['message'].'"></web-greeting></div>';
 	}
 
 	//Check if we our plugin should control this page
@@ -395,10 +396,9 @@ class Web3devs_NEAR_Access_Public {
 	}
 
 	private function hasAccess() {
-		//Get the required token and amount
+		//Get the required token
 		global $post;
 		$token = get_post_meta($post->ID, '_web3devs_near_access_meta_key', true);
-		$amount = 1; //XXX: maybe someday we'll change it to something else :)
 
 		//Start/read session
 		if(!isset($_SESSION) && !headers_sent()) {
@@ -469,17 +469,6 @@ class Web3devs_NEAR_Access_Public {
 	public function enqueue_styles() {
 		$manifest = json_decode(file_get_contents(dirname(__FILE__).'/js/component/build/asset-manifest.json'), true);
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Web3devs_NEAR_Access_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Web3devs_NEAR_Access_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/web3devs-near-access-public.css', array(), $this->version, 'all' );
 	}
 
@@ -491,7 +480,7 @@ class Web3devs_NEAR_Access_Public {
 	public function enqueue_scripts() {
 		$manifest = json_decode(file_get_contents(dirname(__FILE__).'/js/component/build/asset-manifest.json'), true);
 
-		//Yeah, we need this "defer"
+		//Yeah, we REALLY need this "defer"
 		add_filter( 'script_loader_tag', function ( $tag, $handle ) {
 			if ( $this->plugin_name . '-web-component' !== $handle ) {
 				return $tag;

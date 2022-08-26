@@ -13,7 +13,7 @@ Limit access to Posts and Pages based on user's [NEAR](https://www.near.co/) wal
 
 == Description ==
 
-NEAR Access Plugin allows users to define which Posts or Pages have limited access based on user's [Hiro](https://www.hiro.so/wallet) wallet contents (NFTs).
+NEAR Access Plugin allows users to define which Posts or Pages have limited access based on user's [NEAR Wallet](https://wallet.near.org/) wallet contents (NFTs).
 
 Ex. let's say you own Crypto Ducks Club NFTs and want your blog content to be available only to other Crypto Ducks Club owners - with this plugin, you can do that.
 

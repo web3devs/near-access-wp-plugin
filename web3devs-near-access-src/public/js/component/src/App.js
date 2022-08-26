@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import logo from './logo.svg';
 import * as nearAPI from 'near-api-js';
-import './App.css';
 import { Buffer } from 'buffer';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 
+library.add(faCircleXmark);
 window.Buffer = window.Buffer || Buffer;
 
 const getConfig = (network) => {
@@ -27,6 +29,140 @@ const getConfig = (network) => {
   }
 }
 
+const Wrapper = ({ children }) => {
+  const style = {
+    display: 'inline-block',
+    clear: 'both',
+    overflow: 'hidden',
+    padding: '2rem',
+    borderRadius: '15px',
+    boxShadow: '0px 0px 20px -5px rgba(66, 68, 90, 1)',
+    color: '#f35c5d',
+  };
+
+  return (<div style={style}>{children}</div>);
+}
+
+const Icon = () => {
+  const s = 125;
+
+  const style = {
+    width: `${s+10}px`,
+    height: `${s+10}px`,
+    fontSize: `${s}px`,
+    display: 'inline-block',
+    float: 'left',
+  };
+
+  return (
+    <i style={style}>
+      <FontAwesomeIcon icon="fa-solid fa-circle-xmark" color="#f35c5d" />
+    </i>
+  );
+}
+const MainBox = ({ children }) => {
+  const style = {
+    display: 'inline-block',
+    marginLeft: '1rem',
+  };
+
+  return (<div style={style}>
+    <h1 style={{ textDecoration: 'underline' }}>Access denied</h1>
+    {children}
+  </div>);
+}
+
+const TokenButton = ({ url, name }) => {
+  const [hover, setHover] = useState(false);
+  const [style, setStyle] = useState({
+    textDecoration: 'none',
+    fontWeight: 'bold',
+    color: '#9f4290',
+    transition: 'color 0.5s ease',
+  });
+
+  useEffect(() => {
+    setStyle(style => {
+      if (hover) {
+        return { ...style, color: '#9f4290' };
+      }
+
+      return { ...style, color: '#f35c5d' };
+    })
+  }, [hover]);
+
+  return (
+    <a style={style} href={url} target="_blank" rel="noreferrer" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{name}</a>
+  );
+};
+
+const ActionButton = ({ onClick, label }) => {
+  const [hover, setHover] = useState(false);
+  const [style, setStyle] = useState({
+    textDecoration: 'none',
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    color: '#fff',
+    backgroundColor: '#f35c5d',
+    borderRadius: '25px',
+    border: 0,
+    outline: 0,
+    padding: '0.5rem 4rem',
+    display: 'inline-block',
+    cursor: 'pointer',
+    height: '60px',
+    fontSize: '26px',
+    transition: 'background-color 0.5s ease',
+  });
+
+  useEffect(() => {
+    setStyle(style => {
+      if (hover) {
+        return { ...style, backgroundColor: '#9f4290'};
+      }
+
+      return { ...style, backgroundColor: '#f35c5d' };
+    })
+  }, [hover]);
+
+  return (
+    <button style={style} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{label}</button>
+  );
+};
+
+const ActionButtonLink = ({ onClick, label }) => {
+  const [hover, setHover] = useState(false);
+  const [style, setStyle] = useState({
+    textDecoration: 'none',
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    color: '#f35c5d',
+    backgroundColor: '#fff',
+    border: 0,
+    outline: 0,
+    padding: '0.5rem 2rem',
+    display: 'inline-block',
+    cursor: 'pointer',
+    height: '20px',
+    fontSize: '16px',
+    transition: 'color 0.5s ease',
+  });
+
+  useEffect(() => {
+    setStyle(style => {
+      if (hover) {
+        return { ...style, color: '#9f4290' };
+      }
+
+      return { ...style, color: '#f35c5d' };
+    })
+  }, [hover]);
+
+  return (
+    <button style={style} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{label}</button>
+  );
+};
+
 const App = ({
   development,
   tokenName, //Label
@@ -35,20 +171,15 @@ const App = ({
   callback, //callback URL to send signature to
   message,
 }) => {
-  const [prefix, setPrefix] = useState(''); //static assets prefix, use like this: <img src={prefix + logo}...
   const [contractAddress, setContractAddress] = useState(undefined);
   const [explorer, setExplorer] = useState('https://testnet.nearblocks.io/address/');
-
   const [accountID, setAccountID] = useState(undefined);
+  const [error, setError] = useState(undefined);
 
   useEffect(() => {
     const [ca] = tokenAddress.split(':');
     setContractAddress(ca);
   }, [tokenAddress]);
-
-  useEffect(() => {
-    setPrefix(!development ? '/wp-content/plugins/web3devs-near-access/public/js/component/build' : '');
-  }, [development]);
 
   useEffect(() => {
     switch (network) {
@@ -93,20 +224,17 @@ const App = ({
     );
   };
 
-  const disconnect = async () => {};
+  const disconnect = async () => {
+    window.walletAccount.signOut();
+    setError(undefined);
+    setAccountID(undefined);
+  };
   
   const sign = async () => {
-    console.log('Signing message: ', message);
-
     const keyPair = await window.near.connection.signer.keyStore.getKey(network, accountID);
     const sig = keyPair.sign(Buffer.from(message));
-
-    // console.log('signature: ', signature);
-
     const publicKey = Buffer.from(sig.publicKey.data).toString('hex');
     const signature = Buffer.from(sig.signature).toString('hex');
-    console.log('PublicKey: ', publicKey);
-    console.log('Signature: ', signature);
 
     const response = await fetch(callback, {
       method: 'POST',
@@ -123,31 +251,55 @@ const App = ({
 
     const r = await response.json();
 
-    console.log('RESPONSE: ', r);
+    if (typeof (r['redirect']) !== 'undefined') {
+      window.location.href = r.redirect;
+      return;
+    }
+
+    if (typeof(r['error']) !== 'undefined') {
+      setError(r.error);
+      return;
+    }
+
+    if (typeof (r['message']) !== 'undefined' && r.message === 'OK') {
+      window.location.reload(false);
+      return;
+    }
   };
 
   return (
-    <div className="web3devs-near-access">
-      <img src={prefix + logo} alt="" style={{ width: '300px', float: 'left' }} />
-      <div>
-        <div>Hey, you need <strong>{tokenName}</strong> to access this content</div>
-        <div>See <a href={`${explorer}${contractAddress}`} target="_blank" rel="noreferrer">here</a></div>
+    <Wrapper>
+      <div style={{ display: 'inline-block', clear: 'both', marginBottom: '1rem', }}>
+        <Icon />
+        <MainBox>
+          <div>Hey, you need <TokenButton url={`${explorer}${contractAddress}`} name={tokenName} /> to access this content</div>
+        </MainBox>
+      </div>
+      <div style={{ textAlign: 'center', marginTop: '1rem', }}>
         {
-          !accountID && (
-            <button onClick={connect}>Connect</button>
+          error && (
+            <div style={{ color: '#fff', backgroundColor: '#f00', padding: '0.5rem 0', margin: '1rem' }}><strong>Error: </strong>{error}</div>
           )
         }
-
+        {
+          !accountID && (
+            <ActionButton onClick={connect} label="Connect" />
+          )
+        }
         {
           accountID && (
             <>
-              <button onClick={disconnect}>Disconnect?</button>
-              <button onClick={sign}>Sign</button>
+              <div>
+                <ActionButton onClick={sign} label="Sign" />
+              </div>
+              <div>
+                <ActionButtonLink onClick={disconnect} label="Disconnect" />
+              </div>
             </>
-        )
+          )
         }
       </div>
-    </div>
+    </Wrapper>
   );
 }
 

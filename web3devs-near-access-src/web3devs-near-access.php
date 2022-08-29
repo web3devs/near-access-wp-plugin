@@ -2,13 +2,13 @@
 
 /**
  *
- * @link              https://nearaccess.com
+ * @link              https://accessbynft.com
  * @since             1.0.0
  * @package           Web3devs_NEAR_Access
  *
  * @wordpress-plugin
  * Plugin Name:       NEAR Access
- * Plugin URI:        https://nearaccess.com/
+ * Plugin URI:        https://accessbynft.com/
  * Description:       Restrict accesss to pages for users holding specified NEAR-based tokens (NFTs)
  * Version:           1.0.0
  * Author:            Web3devs

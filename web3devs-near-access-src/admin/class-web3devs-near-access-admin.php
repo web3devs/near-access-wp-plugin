@@ -3,7 +3,7 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @link       https://nearaccess.com
+ * @link       https://accessbynft.com
  * @since      1.0.0
  *
  * @package    Web3devs_NEAR_Access

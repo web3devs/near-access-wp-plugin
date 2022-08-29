@@ -1,6 +1,6 @@
 === Web3devs NEAR Access Plugin ===
 Contributors: web3devs
-Donate link: https://nearaccess.com
+Donate link: https://accessbynft.com
 Tags: near, blockchain, access
 Requires at least: 6.0
 Requires PHP: 7.2+

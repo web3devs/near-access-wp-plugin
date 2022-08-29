@@ -4,7 +4,7 @@ require_once plugin_dir_path( __FILE__ ).'../includes/near-b58.php';
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       https://nearaccess.com
+ * @link       https://accessbynft.com
  * @since      1.0.0
  *
  * @package    Web3devs_NEAR_Access

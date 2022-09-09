@@ -268,7 +268,7 @@ class Web3devs_NEAR_Access_Public {
 
 			//See if we have token associated with this page
 			$purl = $_SERVER['HTTP_ORIGIN'] . $_SERVER['REQUEST_URI'];
-			$pid = url_to_postid($purl);
+			$pid = url_to_postid(sanitize_url($purl));
 			$token = get_post_meta($pid, '_web3devs_near_access_meta_key', true);
 			if (!$token) {
 				header("Access-Control-Allow-Origin: *");

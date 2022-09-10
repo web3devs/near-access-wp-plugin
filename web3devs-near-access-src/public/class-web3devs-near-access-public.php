@@ -252,6 +252,28 @@ class Web3devs_NEAR_Access_Public {
 		exit;
 	}
 
+	private function validateContractAddress($address) {
+		if(!preg_match('/^[a-zA-Z0-9\.\-\_]+\:[a-zA-Z0-9\.\-\_]+$/m', $address)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private function validateTokens($tokens) {
+		if (!is_array($tokens)) {
+			return false;
+		}
+
+		foreach ($tokens as $token) {
+			if (!$this->validateContractAddress($token)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	public function handleCallback($vars) {
 		if (isset($_GET['web3devs-near-access-callback'])) {
 			if (strtoupper($_SERVER['REQUEST_METHOD']) === 'OPTIONS') {
@@ -318,7 +340,7 @@ class Web3devs_NEAR_Access_Public {
 
 			//You've proven you have what we want, yay! Let's store it so you don't need to keep doing that every time!
 			$tokens = $_SESSION['web3devs-near-access-tokens'];
-			if (is_null($tokens)) {
+			if (is_null($tokens) || !$this->validateTokens($tokens)) {
 				$tokens = [];
 			}
 			$tokens[] = $token;

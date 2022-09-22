@@ -62,13 +62,7 @@ class Web3devs_NEAR_Access_Public {
 		add_action( 'add_meta_boxes', array($this, 'addWeb3devsNEARAccessBox'));
 		add_action( 'save_post', array($this, 'handleSavePost'));
 
-		add_action('init', array($this, 'registerNEARSession'));
-	}
-
-	public function registerNEARSession() {
-		if (!session_id()) {
-			session_start();
-		}
+		add_action('init', array($this, 'makeSureCookieWithTokenIsSet'));
 	}
 
 	public function addWeb3devsNEARAccessBox( ) {
@@ -253,22 +247,9 @@ class Web3devs_NEAR_Access_Public {
 	}
 
 	private function validateContractAddress($address) {
-		if(!preg_match('/^[a-zA-Z0-9\.\-\_]+\:[a-zA-Z0-9\.\-\_]+$/m', $address)) {
+        // valid contract address / token id example: cowboytest.mintspace2.testnet:108
+		if(!preg_match('/^[a-zA-Z0-9\.\-\_]{1,64}\:[a-zA-Z0-9\.\-\_]{1,64}$/m', $address)) {
 			return false;
-		}
-
-		return true;
-	}
-
-	private function validateTokens($tokens) {
-		if (!is_array($tokens)) {
-			return false;
-		}
-
-		foreach ($tokens as $token) {
-			if (!$this->validateContractAddress($token)) {
-				return false;
-			}
 		}
 
 		return true;
@@ -311,17 +292,22 @@ class Web3devs_NEAR_Access_Public {
 			}
 
 			//Start session if it's not running yet
-			if(!isset($_SESSION) && !headers_sent()) {
-				session_start();
+			if(!headers_sent()) {
+				$this->makeSureCookieWithTokenIsSet();
 			}
 
+            $cookieToken = $_COOKIE['web3devs-near-access-tokens'];
+            if (!$this->validateWPSessionToken($cookieToken)) {
+                $cookieToken = $this->createRandomCookieToken();
+            }
+
 			//Prepare ourselves
-			$message = hash('sha256', session_id());
+			$message = hash('sha256', $cookieToken);
 			$accountID = trim($data['accountID']);
 			$network = trim($data['network']);
 			$signature = trim($data['signature']);
 			$publicKey = trim($data['publicKey']);
-			
+
 
 			//Verify signature
 			if (!$this->verifySignature($message, $signature, $publicKey)) {
@@ -338,16 +324,14 @@ class Web3devs_NEAR_Access_Public {
 				$this->responseError('Wallet balance verification failed');
 			}
 
-			//You've proven you have what we want, yay! Let's store it so you don't need to keep doing that every time!
-			$tokens = $_SESSION['web3devs-near-access-tokens'];
-			if (is_null($tokens) || !$this->validateTokens($tokens)) {
-				$tokens = [];
-			}
-			$tokens[] = $token;
-			$tokens = array_unique($tokens);
-			$_SESSION['web3devs-near-access-tokens'] = $tokens;
+            if (!$this->validateContractAddress($token)) {
+                $this->responseError('Failed to verify token');
+            }
 
-			header("Access-Control-Allow-Origin: *");
+			//You've proven you have what we want, yay! Let's store it so you don't need to keep doing that every time!
+            $this->addValidatedTokenToSessionCache($token);
+
+            header("Access-Control-Allow-Origin: *");
 			header("Access-Control-Allow-Headers: content-type");
 			header('Content-Type: application/json; charset=utf-8');
 			echo json_encode(array('message' => 'OK'));
@@ -387,15 +371,20 @@ class Web3devs_NEAR_Access_Public {
 		$port = isset($url_parts['port']) ? ':'.$url_parts['port'] : '';
 		$callback_url = $url_parts['scheme'].'://'.$url_parts['host'].$port.$url_parts['path'].'?'.$url_parts['query'];
 
+        $cookieToken = $_COOKIE['web3devs-near-access-tokens'];
+        if (!$this->validateWPSessionToken($cookieToken)) {
+            $cookieToken = $this->createRandomCookieToken();
+        }
+
 		$data = [
-			'message' 		=> hash('sha256', session_id()), //secret message to sign
-			'callback' 		=> $callback_url,
+			'message' 		=> hash('sha256', $cookieToken), //secret message to sign
+			'callback' 		=> sanitize_url($callback_url),
 			'tokenName'		=> $token['symbol'],
 			'tokenAddress' 	=> $token['contract'],
 			'network' 		=> $token['network'],
 		];
 
-		return '<div style="display: flex; align-items: center; flex-direction: column"><web-greeting tokenName="'.$data['tokenName'].'" tokenAddress="'.$data['tokenAddress'].'" network="'.$data['network'].'" callback="'.$data['callback'].'" message="'.$data['message'].'"></web-greeting></div>';
+		return '<div style="display: flex; align-items: center; flex-direction: column"><web-greeting tokenName="'.esc_attr($data['tokenName']).'" tokenAddress="'.esc_attr($data['tokenAddress']).'" network="'.esc_attr($data['network']).'" callback="'.esc_attr($data['callback']).'" message="'.esc_attr($data['message']).'"></web-greeting></div>';
 	}
 
 	//Check if we our plugin should control this page
@@ -422,24 +411,9 @@ class Web3devs_NEAR_Access_Public {
 		global $post;
 		$token = get_post_meta($post->ID, '_web3devs_near_access_meta_key', true);
 
-		//Start/read session
-		if(!isset($_SESSION) && !headers_sent()) {
-			session_start();
-		}
+        return $this->hasCachedToken($token);
 
-		//Check if we have a session with tokens
-		if (!isset($_SESSION['web3devs-near-access-tokens'])) {
-			return false;
-		}
-
-		foreach ($_SESSION['web3devs-near-access-tokens'] as $t) {
-			if ($t === $token) {
-				return true;
-			}
-		}
-
-		return false;
-	}
+    }
 
 	public function handleContentAccess($content) {
 		if ($this->shouldControl() && !$this->hasAccess()) {
@@ -510,8 +484,92 @@ class Web3devs_NEAR_Access_Public {
 
 			return str_replace( ' src', ' defer src', $tag ); // defer the script
 		}, 10, 2 );
-		wp_enqueue_script( $this->plugin_name . '-web-component-polyfil', 'https://unpkg.com/@webcomponents/custom-elements', array( 'jquery' ), $this->version, false );
+		wp_enqueue_script( $this->plugin_name . '-web-component-polyfil', plugin_dir_url( __FILE__ ) . 'js/custom-elements.min.js', array( 'jquery' ), $this->version, false );
 		wp_enqueue_script( $this->plugin_name . '-web-component', plugin_dir_url( __FILE__ ) . 'js/component/build'.$manifest['files']['main.js'], array( 'jquery' ), $this->version, false );
 	}
+
+    private function addValidatedTokenToSessionCache($token): void
+    {
+        $wp_session = WP_Session_Tokens::get_instance(get_current_user_id());
+
+        $this->makeSureCookieWithTokenIsSet();
+        $sessionToken = $_COOKIE['web3devs-near-access-tokens'];
+        if (! $this->validateWPSessionToken($sessionToken)) {
+            return;
+        }
+        $validatedSessionToken = $sessionToken;
+
+        $tokens = $wp_session->get($validatedSessionToken);
+
+        if (is_null($tokens) || !is_array($tokens)) {
+            $tokens = [];
+        }
+        $tokens[] = $token;
+        $tokens = array_unique($tokens);
+
+        // changing something based on token - change random token for security purposes
+        $wp_session->destroy($validatedSessionToken);
+        // token generated by WP_Session_Tokens - no need to validate again
+        $newGeneratedToken = $this->createRandomCookieToken();
+        // store tokens list under new token
+        $wp_session->update($newGeneratedToken, $tokens);
+    }
+
+    private function hasCachedToken($token): bool
+    {
+        $wp_session = WP_Session_Tokens::get_instance(get_current_user_id());
+
+        if (!isset($_COOKIE['web3devs-near-access-tokens'])) {
+            return false;
+        }
+
+        $tokenFromCookie = $_COOKIE['web3devs-near-access-tokens'];
+        if (!$this->validateWPSessionToken($tokenFromCookie)) {
+            setcookie('web3devs-near-access-tokens', null, 0, '/');
+            return false;
+        }
+        $validatedTokenFromCookie = $tokenFromCookie;
+
+        // check for tokens based on WP_Session_Token created identifier
+        $tokens = $wp_session->get($validatedTokenFromCookie);
+
+        // check tokens fetched from wp_session are valid
+        if (!is_array($tokens)) {
+            return false;
+        }
+
+        foreach ($tokens as $t) {
+            if ($t === $token) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function makeSureCookieWithTokenIsSet()
+    {
+        if (!isset($_COOKIE['web3devs-near-access-tokens'])) {
+            $_COOKIE['web3devs-near-access-tokens'] = $this->createRandomCookieToken();
+        }
+    }
+
+    private function validateWPSessionToken($tokenFromCookie)
+    {
+        return preg_match(
+                '/^[a-zA-Z0-9]{43}$/',
+                $tokenFromCookie,
+            ) === 1;
+    }
+
+    private function createRandomCookieToken()
+    {
+        $wp_session = WP_Session_Tokens::get_instance(get_current_user_id());
+        $generatedToken = $wp_session->create(strtotime('+15min'));
+        // setting cookie to id created by WP_Session_Tokens - no need to sanitize/validate
+        setcookie('web3devs-near-access-tokens', $generatedToken, 0, '/');
+
+        return $generatedToken;
+    }
 
 }

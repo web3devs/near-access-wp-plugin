@@ -73,7 +73,7 @@ class Web3devs_NEAR_Access_Admin {
 	public function displayPluginAdminSettings() {
 		if(isset($_GET['error_message'])){
 			add_action('admin_notices', array($this,'web3devsNEARAccessSettingsMessages'));
-			do_action( 'admin_notices', esc_kses($_GET['error_message']) );
+			do_action('admin_notices', wp_kses($_GET['error_message']));
 		}
 		$coins = get_option('web3devs_near_access_configured_coins_setting');
 

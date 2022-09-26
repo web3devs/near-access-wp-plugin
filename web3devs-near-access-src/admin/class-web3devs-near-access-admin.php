@@ -183,7 +183,7 @@ class Web3devs_NEAR_Access_Admin {
 	}
 
 	private function validateContractAddress($address) {
-		if(!preg_match('/^[a-zA-Z0-9\.\-\_]+\:[a-zA-Z0-9\.\-\_]+$/m', $address)) {
+		if(!preg_match('/^[a-zA-Z0-9\.\-\_]+\:[a-zA-Z0-9\.\-\_\*]+$/m', $address)) {
 			return false;
 		}
 
@@ -305,7 +305,8 @@ class Web3devs_NEAR_Access_Admin {
 						<td colspan="3">
 							<strong>NOTE!</strong>
 							<div>
-								Use contract address in format <strong>CONTRACT_ADDRESS:TOKEN_ID</strong>, ex. <strong>cowboytest.mintspace2.testnet:108</strong>
+								<p>For individual tokens, use contract address in format <strong>CONTRACT_ADDRESS:TOKEN_ID</strong>, ex. <strong>cowboytest.mintspace2.testnet:108</strong></p>
+								<p>For collections (anything in collection) asterisk for the <strong>TOKEN_ID</strong>, ex. <strong>cowboytest.mintspace2.testnet:*</strong></p>
 							</div>
 							<div>
 								You can find the contract address in your Wallet's address bar. It'll look like this: https://wallet.testnet.near.org/nft-detail/cowboytest.mintspace2.testnet/108

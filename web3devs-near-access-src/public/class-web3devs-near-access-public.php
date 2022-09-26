@@ -170,22 +170,8 @@ class Web3devs_NEAR_Access_Public {
 		return false;
 	}
 
-	private function verifyWalletBalance($network, $accountID, $token) {
-		try {
-			$pts = explode(':', $token);
-			$contract = $pts[0];
-			$token_id = $pts[1];
-
-			if (trim($contract) === '' || trim($token_id) === '') {
-				return false;
-			}
-
-			$rpc = 'https://rpc.testnet.near.org';
-			if (strtolower($network) === 'mainnet') {
-				$rpc = 'https://rpc.near.org';
-			}
-
-			$body = json_encode(array(
+	private function verifyTokenBalance($rpc, $accountID, $contract, $token) {
+		$body = json_encode(array(
 				'jsonrpc' 	=> '2.0',
 				'id' 		=> 'dontcare',
 				'method' 	=> 'query',
@@ -225,6 +211,71 @@ class Web3devs_NEAR_Access_Public {
 			}
 
 			return true;
+	}
+
+	private function verifyContractBalance($rpc, $accountID, $contract) {
+		$body = json_encode(array(
+				'jsonrpc' 	=> '2.0',
+				'id' 		=> 'dontcare',
+				'method' 	=> 'query',
+				'params' 	=> [
+					'request_type' 	=> 'call_function',
+					'account_id' 	=> $contract,
+					'method_name'	=> 'nft_tokens_for_owner_set',
+					'args_base64'	=> base64_encode(json_encode(['account_id' => $accountID])),
+					'finality'		=> 'final',
+				],
+			));
+
+			$options = [
+				'body'        => $body,
+				'headers'     => [
+					'Content-Type' => 'application/json',
+				],
+				'timeout'     => 60,
+				'redirection' => 5,
+				'blocking'    => true,
+				'httpversion' => '1.1',
+				'sslverify'   => false,
+				'data_format' => 'body',
+			];
+
+			$resp = wp_remote_post($rpc, $options);
+			if (is_wp_error($resp)) {
+				die("Error: call to URL $rpc failed with status $status, response $resp");
+			}
+
+			$body 	= json_decode(wp_remote_retrieve_body($resp), true);
+			$result = $body['result']['result'];
+			$jsn 	= implode(array_map("chr", $result));
+			$t		= json_decode($jsn, true);
+			if (!is_array($t) || count($t) === 0) {
+				return false;
+			}
+
+			return true;
+	}
+
+	private function verifyWalletBalance($network, $accountID, $token) {
+		try {
+			$pts = explode(':', trim($token));
+			$contract = $pts[0];
+			$token_id = $pts[1];
+
+			if (trim($contract) === '' || trim($token_id) === '') {
+				return false;
+			}
+
+			$rpc = 'https://rpc.testnet.near.org';
+			if (strtolower($network) === 'mainnet') {
+				$rpc = 'https://rpc.near.org';
+			}
+
+			if ($token_id === '*') {
+				return $this->verifyContractBalance($rpc, $accountID, $contract);
+			}
+
+			return $this->verifyTokenBalance($rpc, $accountID, $contract, $token);
 		} catch (Exception $e) {
 			return false;
 		}
@@ -252,7 +303,7 @@ class Web3devs_NEAR_Access_Public {
 
 	private function validateContractAddress($address) {
         // valid contract address / token id example: cowboytest.mintspace2.testnet:108
-		if(!preg_match('/^[a-zA-Z0-9\.\-\_]{1,64}\:[a-zA-Z0-9\.\-\_]{1,64}$/m', $address)) {
+		if(!preg_match('/^[a-zA-Z0-9\.\-\_]{1,64}\:[a-zA-Z0-9\.\-\_\*]{1,64}$/m', $address)) {
 			return false;
 		}
 
@@ -398,7 +449,6 @@ class Web3devs_NEAR_Access_Public {
 		$token = get_post_meta($post->ID, '_web3devs_near_access_meta_key', true);
 
         return $this->hasCachedToken($token);
-
     }
 
 	public function handleContentAccess($content) {
